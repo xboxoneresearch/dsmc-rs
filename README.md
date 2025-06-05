@@ -11,6 +11,10 @@ Tested version of `dsmcdll.dll`:
 - ✅ 10.0.14393.1040 `(rs1_xbox_rel_1608.160816-1851)`
 - ❌ 10.0.19041.4350 `(WinBuild.160101.0800)`
 
+To be used with the [FACET2](https://xboxoneresearch.github.io/wiki/hardware/facet/) PCB / Onboard-FTDI or external FT4232H board.
+
+Check out: [ASPECT2-PCB](https://github.com/xboxoneresearch/ASPECT2-PCB).
+
 ## dsmcflash
 
 CLI to read/write flash and get "expected 1SMCBL digest".
