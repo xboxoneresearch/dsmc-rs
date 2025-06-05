@@ -26,6 +26,43 @@ pub struct DSMCObject {
     vtable: *const DSMCObjectVTable,
 }
 
+/*
+Newer DLL supports additional methods, marked with *
+
+GetInterfaceVersion
+Release
+
+Initialize(DSmc *, string PlatformSpec) -> i32
+* GetConsoleGeneration(DSmc *, DSMC_CONSOLE_GENERATION *pOutConsoleGeneration) -> i32
+BeginProgramming(DSmc *)
+* BeginProgramming(DSmc *, DSMCDLL_PROGRAMMING_TARGET target) -> i32
+RegisterProgress(DSmc *, delegate<long, void*, void> callback, void* context) -> void
+// Only valid for Scarlett? Reads SmcErrorLog from SPI NOR and parses it
+* GetSocInfo(DSmc *, byte *purposeId, byte* securityState)
+* GetBlockSize(DSmc *, uint *blockSize) -> i32
+* GetBlockCount(DSmc *, ulong *blockCount) -> i32
+* SetBlockSize4K(DSmc *) -> i32
+* SetBlockSize(DSmc *, uint blockSize) -> i32
+BlockWrite(DSmc *, uint blockOffset, void *buffer, uint blockCount)
+BlockRead(DSmc *, uint blockOffset, void* buffer, uint blockCount)
+EndProgramming(DSmc *)
+PowerButton(DSmc *)
+SetSafeTransfer(DSmc *, bool enabled)
+GetExpDigest1SMCBL(DSmc *, byte* Digest, sbyte **KnownName)
+SetExitEvent(DSmc *, void *ExitHandle)
+
+enum DSMC_PROGRAMMING_TARGET {
+    IEMMC = 0,
+    SPI_NOR = 1,
+    NVME_SERIAL_TRANSPORT = 2,
+};
+
+enum DSMCDLL_CONSOLE_GENERATION {
+    DURANGO = 0,
+    SCARLETT = 1,
+};
+*/
+
 #[repr(C)]
 struct DSMCObjectVTable {
     /* 0x00 */ GetInterfaceVersion: unsafe extern "C" fn(*mut DSMCObject) -> i32,
