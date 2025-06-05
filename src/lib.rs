@@ -28,22 +28,22 @@ pub struct DSMCObject {
 
 #[repr(C)]
 struct DSMCObjectVTable {
-    /* 0x00 */ GetInterfaceVersion: unsafe extern fn(*mut DSMCObject) -> i32,
-    /* 0x08 */ Release: unsafe extern fn(*mut DSMCObject) -> c_void,
+    /* 0x00 */ GetInterfaceVersion: unsafe extern "C" fn(*mut DSMCObject) -> i32,
+    /* 0x08 */ Release: unsafe extern "C" fn(*mut DSMCObject) -> c_void,
 
-    /* 0x10 */ Initialize: unsafe extern fn(*mut DSMCObject, i32) -> i32,
-    /* 0x18 */ BeginProgramming: unsafe extern fn(*mut DSMCObject) -> i32,
-    /* 0x20 */ RegisterProgress: unsafe extern fn(*mut DSMCObject, *mut c_void, *mut c_void) -> i32,
-    /* 0x28 */ BlockWrite: unsafe extern fn(*mut DSMCObject, i32, *mut c_void, i32) -> i32,
-    /* 0x30 */ BlockRead: unsafe extern fn(*mut DSMCObject, i32, *mut c_void, i32) -> i32,
-    /* 0x38 */ EndProgramming: unsafe extern fn(*mut DSMCObject) -> i32,
-    /* 0x40 */ PowerButton: unsafe extern fn(*mut DSMCObject) -> i32,
-    /* 0x48 */ SetSafeTransferMode: unsafe extern fn(*mut DSMCObject, bool) -> i32,
-    /* 0x50 */ GetExpDigest1SMCBL: unsafe extern fn(*mut DSMCObject, *mut c_void, *mut c_void) -> i32,
-    /* 0x58 */ SetExitEvent: unsafe extern fn(*mut DSMCObject) -> i32,
+    /* 0x10 */ Initialize: unsafe extern "C" fn(*mut DSMCObject, i32) -> i32,
+    /* 0x18 */ BeginProgramming: unsafe extern "C" fn(*mut DSMCObject) -> i32,
+    /* 0x20 */ RegisterProgress: unsafe extern "C" fn(*mut DSMCObject, *mut c_void, *mut c_void) -> i32,
+    /* 0x28 */ BlockWrite: unsafe extern "C" fn(*mut DSMCObject, i32, *mut c_void, i32) -> i32,
+    /* 0x30 */ BlockRead: unsafe extern "C" fn(*mut DSMCObject, i32, *mut c_void, i32) -> i32,
+    /* 0x38 */ EndProgramming: unsafe extern "C" fn(*mut DSMCObject) -> i32,
+    /* 0x40 */ PowerButton: unsafe extern "C" fn(*mut DSMCObject) -> i32,
+    /* 0x48 */ SetSafeTransferMode: unsafe extern "C" fn(*mut DSMCObject, bool) -> i32,
+    /* 0x50 */ GetExpDigest1SMCBL: unsafe extern "C" fn(*mut DSMCObject, *mut c_void, *mut c_void) -> i32,
+    /* 0x58 */ SetExitEvent: unsafe extern "C" fn(*mut DSMCObject) -> i32,
 }
 
-type CreateDSmcObjectPtr = unsafe extern fn(*mut *mut DSMCObject) -> i32;
+type CreateDSmcObjectPtr = unsafe extern "C" fn(*mut *mut DSMCObject) -> i32;
 
 pub trait DSMCFunctions {
     fn get_interface_version(&self) -> Result<i32, DSmcError>;
@@ -51,7 +51,10 @@ pub trait DSMCFunctions {
 
     fn initialize(&self, port_number: i32) -> Result<(), DSmcError>;
     fn begin_programming(&self) -> Result<(), DSmcError>;
-    fn register_progress(&self, callback: *mut c_void, unknown: *mut c_void) -> Result<(), DSmcError>;
+    /// # Safety
+    ///
+    /// This function takes two unsafe arguments, callback is a function, unknown is some sort of state
+    unsafe fn register_progress(&self, callback: *mut c_void, state: *mut c_void) -> Result<(), DSmcError>;
     fn block_write(&self, start_sector: i32, buf: &[u8]) -> Result<(), DSmcError>;
     fn block_read(&self, start_sector: i32, sector_count: i32) -> Result<Vec<u8>, DSmcError>;
     fn end_programming(&self) -> Result<(), DSmcError>;
@@ -72,25 +75,25 @@ impl DSMC {
             return Err("dsmcdll.dll failed to load!\nmake sure you have the SDK/FTDI drivers installed".into());
         }
 
-        let create_dsmc_object: CreateDSmcObjectPtr = unsafe {
-            std::mem::transmute(GetProcAddress(module, b"CreateDSmcObject\0".as_ptr() as *const i8))
+        let create_dsmc_object: Option<CreateDSmcObjectPtr> = unsafe {
+            std::mem::transmute(GetProcAddress(module, c"CreateDSmcObject".as_ptr()))
         };
 
-        if create_dsmc_object as *const () == ptr::null() {
-            return Err("error: GetProcAddress(CreateDSmcObject) failed!".into());
+        if let Some(create_dsmc_object) = create_dsmc_object {
+            let mut dsmc: *mut DSMCObject = ptr::null_mut();
+            let result = unsafe { create_dsmc_object(&mut dsmc) };
+
+            if result != 0 {
+                let msg = format!("CreateDSmcObject failed: {:#x}", result);
+                return Err(msg.into());
+            }
+
+            Ok(Self {
+                object: dsmc
+            })
+        } else {
+            Err("error: GetProcAddress(CreateDSmcObject) failed!".into())
         }
-
-        let mut dsmc: *mut DSMCObject = ptr::null_mut();
-        let result = unsafe { create_dsmc_object(&mut dsmc) };
-
-        if result != 0 {
-            let msg = format!("CreateDSmcObject failed: {:#x}", result);
-            return Err(msg.into());
-        }
-
-        Ok(Self {
-            object: dsmc
-        })
     }
 }
 
@@ -123,7 +126,7 @@ impl DSMCFunctions for DSMC {
         dsmc_call!(self, BeginProgramming)
     }
 
-    fn register_progress(&self, callback: *mut c_void, unknown: *mut c_void) -> Result<(), DSmcError> {
+    unsafe fn register_progress(&self, callback: *mut c_void, unknown: *mut c_void) -> Result<(), DSmcError> {
         dsmc_call!(self, RegisterProgress, callback, unknown)
     }
 
