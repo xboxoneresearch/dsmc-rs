@@ -78,7 +78,7 @@ fn handle(args: Args) -> Result<(), DSmcError> {
         Command::Read { file, offset, length } => {
             let start_sector = (offset / SMC_NAND_BLOCK_SZ as u64) as usize;
             let num_sectors = match length {
-                Some(len) => len.div_ceil(SMC_NAND_BLOCK_SZ as usize) as usize,
+                Some(len) => len.div_ceil(SMC_NAND_BLOCK_SZ as u64) as usize,
                 None => NAND_SECTORS - start_sector,
             };
 
@@ -109,7 +109,7 @@ fn handle(args: Args) -> Result<(), DSmcError> {
         Command::Write { file, offset } => {
             let start_sector = (offset / SMC_NAND_BLOCK_SZ as u64) as usize;
             let data = std::fs::read(file).unwrap();
-            let num_sectors = data.len().div_ceil(SMC_NAND_BLOCK_SZ as usize) as usize;
+            let num_sectors = data.len().div_ceil(SMC_NAND_BLOCK_SZ as usize);
 
             if start_sector >= NAND_SECTORS {
                 eprintln!("Error: Start offset exceeds NAND size");
