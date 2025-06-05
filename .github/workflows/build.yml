@@ -1,0 +1,66 @@
+name: Build & Release
+
+on:
+  push:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+  build:
+    name: Build
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: rust-src, clippy
+      - name: Lint
+        continue-on-error: true
+        run: cargo clippy --tests --all
+      - name: Build
+        run: cargo build --release --target x86_64-pc-windows-msvc --all
+      - name: Prepare artifact
+        run: |
+          mkdir dist/
+          cp target/x86_64-pc-windows-msvc/release/dsmcflash.exe dist/
+          cp README.md dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: dist/**
+
+  release:
+    name: Release
+    needs: [build]
+    if: success() && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: binaries
+          path: artifact
+      - run: ls -R
+      - name: Create release zip
+        run: |
+          mkdir release/
+          cp artifact/* release/
+          cd release/
+          7z a ../dsmcflash-${{ github.ref_name }}.zip *
+          cd ..
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: false
+          files: |
+            dsmcflash-*.zip
