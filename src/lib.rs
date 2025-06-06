@@ -33,11 +33,14 @@ GetInterfaceVersion
 Release
 
 Initialize(DSmc *, string PlatformSpec) -> i32
+// Since File Version 10.0.19041.4350 (GDKX)
 * GetConsoleGeneration(DSmc *, DSMC_CONSOLE_GENERATION *pOutConsoleGeneration) -> i32
 BeginProgramming(DSmc *)
+// Since File Version 10.0.19041.4350 (GDKX)
 * BeginProgramming(DSmc *, DSMCDLL_PROGRAMMING_TARGET target) -> i32
 RegisterProgress(DSmc *, delegate<long, void*, void> callback, void* context) -> void
 // Only valid for Scarlett? Reads SmcErrorLog from SPI NOR and parses it
+// Next 5 methods since File Version 10.0.19041.4350 (GDKX)
 * GetSocInfo(DSmc *, byte *purposeId, byte* securityState)
 * GetBlockSize(DSmc *, uint *blockSize) -> i32
 * GetBlockCount(DSmc *, ulong *blockCount) -> i32
@@ -48,6 +51,8 @@ BlockRead(DSmc *, uint blockOffset, void* buffer, uint blockCount)
 EndProgramming(DSmc *)
 PowerButton(DSmc *)
 SetSafeTransfer(DSmc *, bool enabled)
+// Since File Version 10.0.25398.4271
+* GetLastErrorDetails(DSmc *, sbyte **errorDetails)
 GetExpDigest1SMCBL(DSmc *, byte* Digest, sbyte **KnownName)
 SetExitEvent(DSmc *, void *ExitHandle)
 
